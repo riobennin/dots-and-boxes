@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dots &amp; Boxes</title>
+<title>Slug in a Slot · Bennin Slug Farms</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Patrick+Hand&display=swap" rel="stylesheet">
@@ -75,6 +75,13 @@
     user-select: none;
   }
   h1.logo .amp { color: var(--p2); }
+  p.est {
+    font-size: 1.05rem;
+    opacity: 0.62;
+    transform: rotate(-0.8deg);
+    margin-top: 2px;
+    user-select: none;
+  }
   h1.logo .scribble {
     display: block;
     width: 190px;
@@ -356,11 +363,12 @@
 </head>
 <body>
 <div id="app">
-  <h1 class="logo">Dots <span class="amp">&amp;</span> Boxes
+  <h1 class="logo">Slug <span class="amp">in a</span> Slot
     <svg class="scribble" viewBox="0 0 190 12" fill="none">
       <path d="M3 8 C 30 3, 55 10, 85 6 S 140 9, 187 4" stroke="#d64541" stroke-width="3" stroke-linecap="round"/>
     </svg>
   </h1>
+  <p class="est">Bennin Slug Farms · est. 1749 — a family owned &amp; operated organic business</p>
 
   <div id="hud">
     <div class="scorecard" data-p="0">
@@ -377,33 +385,33 @@
   </div>
 
   <div id="board"></div>
-  <button id="newGameBtn" class="btn">← New game</button>
+  <button id="newGameBtn" class="btn">← Back to the barn</button>
 
   <!-- setup -->
   <div id="setup">
     <div class="setup-card">
-      <h2>Grab a pencil — who's playing?</h2>
+      <h2>Grab a slug and get to work 🐌</h2>
       <div class="players-row">
         <div class="player-col" data-p="0">
-          <label for="name0">Player 1</label>
-          <input type="text" maxlength="16" placeholder="Player 1" id="name0">
+          <label for="name0">Farmhand 1</label>
+          <input type="text" maxlength="16" placeholder="Farmhand 1" id="name0">
           <div class="emoji-grid" id="emoji0"></div>
         </div>
         <div class="player-col" data-p="1">
-          <label for="name1">Player 2</label>
-          <input type="text" maxlength="16" placeholder="Player 2" id="name1">
+          <label for="name1">Farmhand 2</label>
+          <input type="text" maxlength="16" placeholder="Farmhand 2" id="name1">
           <div class="emoji-grid" id="emoji1"></div>
         </div>
       </div>
       <div class="size-row">
-        <h2 style="margin:0">Pen size:</h2>
+        <h2 style="margin:0">Slot size:</h2>
         <button class="btn size" data-size="3">3 × 3</button>
         <button class="btn size selected" data-size="5">5 × 5</button>
         <button class="btn size" data-size="7">7 × 7</button>
         <button class="btn size" data-size="9">9 × 9</button>
       </div>
       <div class="start-row">
-        <button id="startBtn" class="btn primary">Start scribbling →</button>
+        <button id="startBtn" class="btn primary">Start farming →</button>
       </div>
     </div>
   </div>
@@ -425,8 +433,8 @@
         crossorigin="anonymous"></script>
 <script>
 (() => {
-  const EMOJI = ['🐷','🐔','⭐','🔥','🐸','🦊','🌵','🍕','🚀','🐙',
-                 '🌈','⚡','🍩','👾','🦖','🐝','🍄','⚽','🎩','💎'];
+  const EMOJI = ['🐌','🦎','🐛','🪱','🐸','🐢','🦗','🪲','🐞','🐜',
+                 '🕷️','🦂','🥬','🥒','🍄','🌱','🍃','🪴','🌧️','🧂'];
   const COLORS = [
     { ink: 0x2b59c3, soft: 0x2b59c3, css: '#2b59c3' },
     { ink: 0xd64541, soft: 0xd64541, css: '#d64541' },
@@ -434,7 +442,7 @@
   const PENCIL = 0x3a3a3a;
 
   // ---------- setup screen state ----------
-  const picked = ['🐷', '🐔'];
+  const picked = ['🐌', '🦎'];
   let gridSize = 5;
 
   const grids = [document.getElementById('emoji0'), document.getElementById('emoji1')];
@@ -753,7 +761,7 @@
       if (a.score !== b.score) {
         const w = a.score > b.score ? a : b;
         el.bannerEmoji.textContent = w.emoji;
-        el.bannerTitle.textContent = `${w.name} wins!`;
+        el.bannerTitle.textContent = `${w.name} wins the harvest!`;
       } else {
         el.bannerEmoji.textContent = '🤝';
         el.bannerTitle.textContent = "It's a tie!";
@@ -767,7 +775,7 @@
   async function startGame() {
     state.rows = state.cols = gridSize;
     state.players = [0, 1].map(p => ({
-      name: document.getElementById('name' + p).value.trim() || `Player ${p + 1}`,
+      name: document.getElementById('name' + p).value.trim() || `Farmhand ${p + 1}`,
       emoji: picked[p],
       score: 0,
     }));
