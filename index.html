@@ -134,17 +134,22 @@
 
   .scorecard .pencil {
     position: absolute;
-    top: -16px;
-    right: -10px;
-    font-size: 1.4rem;
+    top: -22px;
+    right: -8px;
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.15rem;
+    white-space: nowrap;
     opacity: 0;
-    transform: rotate(20deg) scale(0.5);
+    transform: rotate(4deg) scale(0.5);
     transition: opacity 0.2s, transform 0.25s;
   }
+  .scorecard[data-p="0"] .pencil { color: var(--p1); }
+  .scorecard[data-p="1"] .pencil { color: var(--p2); }
   .scorecard.active { box-shadow: 4px 5px 0 rgba(58, 58, 58, 0.18); }
   .scorecard.active[data-p="0"] { border-color: var(--p1); background: var(--p1-soft); }
   .scorecard.active[data-p="1"] { border-color: var(--p2); background: var(--p2-soft); }
-  .scorecard.active .pencil { opacity: 1; transform: rotate(20deg) scale(1); }
+  .scorecard.active .pencil { opacity: 1; transform: rotate(4deg) scale(1); }
 
   .score.bump { animation: bump 0.35s ease; }
   @keyframes bump {
@@ -373,13 +378,13 @@
 
   <div id="hud">
     <div class="scorecard" data-p="0">
-      <span class="pencil">✏️</span>
+      <span class="pencil">✏️ your turn!</span>
       <span class="badge"></span>
       <span class="who"><span class="name"></span><span class="score">0</span></span>
     </div>
     <span id="vs">vs</span>
     <div class="scorecard" data-p="1">
-      <span class="pencil">✏️</span>
+      <span class="pencil">✏️ your turn!</span>
       <span class="badge"></span>
       <span class="who"><span class="name"></span><span class="score">0</span></span>
     </div>
