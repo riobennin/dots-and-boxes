@@ -442,7 +442,7 @@
   const PENCIL = 0x3a3a3a;
 
   // ---------- setup screen state ----------
-  const picked = ['🐌', '🦎'];
+  const picked = ['🐛', '🐌'];
   let gridSize = 5;
 
   const grids = [document.getElementById('emoji0'), document.getElementById('emoji1')];
@@ -761,12 +761,12 @@
       if (a.score !== b.score) {
         const w = a.score > b.score ? a : b;
         el.bannerEmoji.textContent = w.emoji;
-        el.bannerTitle.textContent = `${w.name} wins the harvest!`;
+        el.bannerTitle.textContent = `${w.name} is the Sluggo!`;
       } else {
         el.bannerEmoji.textContent = '🤝';
         el.bannerTitle.textContent = "It's a tie!";
       }
-      el.bannerScore.textContent = `${a.name} ${a.score} — ${b.score} ${b.name}`;
+      el.bannerScore.textContent = `${a.emoji} ${a.name}: ${a.score}  ·  ${b.emoji} ${b.name}: ${b.score}`;
       el.banner.classList.add('visible');
     }, 650);
   }
