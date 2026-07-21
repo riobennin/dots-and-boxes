@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dots &amp; Boxes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f7f3e8;
+    --grid-line: rgba(116, 160, 199, 0.28);
+    --margin-line: rgba(214, 69, 65, 0.35);
+    --pencil: #3a3a3a;
+    --p1: #2b59c3;
+    --p2: #d64541;
+    --p1-soft: rgba(43, 89, 195, 0.13);
+    --p2-soft: rgba(214, 69, 65, 0.13);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Patrick Hand', cursive;
+    color: var(--pencil);
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 26px 26px;
+    overflow: hidden;
+  }
+
+  /* red notebook margin line */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; bottom: 0;
+    left: 58px;
+    width: 2px;
+    background: var(--margin-line);
+    pointer-events: none;
+  }
+
+  /* paper grain */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.18 0 0 0 0 0.14 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  #app {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 14px 20px 20px;
+    z-index: 1;
+  }
+
+  h1.logo {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    line-height: 1;
+    transform: rotate(-1.5deg);
+    letter-spacing: 0.01em;
+    user-select: none;
+  }
+  h1.logo .amp { color: var(--p2); }
+  h1.logo .scribble {
+    display: block;
+    width: 190px;
+    height: 12px;
+    margin: 2px auto 0;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud {
+    display: none;
+    align-items: stretch;
+    gap: 18px;
+    margin: 10px 0 6px;
+  }
+  #hud.visible { display: flex; }
+
+  .scorecard {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 18px 6px 12px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 2px solid var(--pencil);
+    border-radius: 14px 10px 15px 9px / 9px 15px 10px 14px;
+    transform: rotate(-0.6deg);
+    transition: box-shadow 0.25s, transform 0.25s;
+    min-width: 170px;
+  }
+  .scorecard:last-child { transform: rotate(0.7deg); }
+  .scorecard .badge { font-size: 1.9rem; line-height: 1; }
+  .scorecard .who { display: flex; flex-direction: column; }
+  .scorecard .name {
+    font-size: 1.15rem;
+    line-height: 1.1;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .scorecard .score {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.7rem;
+    line-height: 1;
+  }
+  .scorecard[data-p="0"] .score { color: var(--p1); }
+  .scorecard[data-p="1"] .score { color: var(--p2); }
+
+  .scorecard .pencil {
+    position: absolute;
+    top: -16px;
+    right: -10px;
+    font-size: 1.4rem;
+    opacity: 0;
+    transform: rotate(20deg) scale(0.5);
+    transition: opacity 0.2s, transform 0.25s;
+  }
+  .scorecard.active { box-shadow: 4px 5px 0 rgba(58, 58, 58, 0.18); }
+  .scorecard.active[data-p="0"] { border-color: var(--p1); background: var(--p1-soft); }
+  .scorecard.active[data-p="1"] { border-color: var(--p2); background: var(--p2-soft); }
+  .scorecard.active .pencil { opacity: 1; transform: rotate(20deg) scale(1); }
+
+  .score.bump { animation: bump 0.35s ease; }
+  @keyframes bump {
+    40% { transform: scale(1.5) rotate(-6deg); }
+    100% { transform: scale(1); }
+  }
+
+  #vs {
+    align-self: center;
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.3rem;
+    opacity: 0.55;
+    user-select: none;
+  }
+
+  /* ---------- board ---------- */
+  #board {
+    flex: 1;
+    width: 100%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+  #board.visible { display: flex; }
+  #board canvas { display: block; }
+
+  #newGameBtn {
+    display: none;
+    margin-top: 8px;
+  }
+  #newGameBtn.visible { display: inline-block; }
+
+  /* ---------- buttons ---------- */
+  .btn {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 1.1rem;
+    color: var(--pencil);
+    background: rgba(255, 255, 255, 0.7);
+    border: 2px dashed var(--pencil);
+    border-radius: 12px 8px 13px 7px / 7px 13px 8px 12px;
+    padding: 6px 20px;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s, border-color 0.15s;
+  }
+  .btn:hover { transform: rotate(-1.5deg) scale(1.05); background: #fff; }
+  .btn:active { transform: scale(0.96); }
+
+  .btn.primary {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.6rem;
+    padding: 8px 34px;
+    border-style: solid;
+    background: var(--pencil);
+    color: var(--paper);
+  }
+  .btn.primary:hover { background: #222; transform: rotate(1deg) scale(1.05); }
+
+  /* ---------- setup overlay ---------- */
+  #setup {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow-y: auto;
+    z-index: 5;
+  }
+  #setup.hidden { display: none; }
+
+  .setup-card {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(2px);
+    border: 2px solid var(--pencil);
+    border-radius: 22px 14px 24px 12px / 12px 24px 14px 22px;
+    box-shadow: 7px 9px 0 rgba(58, 58, 58, 0.15);
+    transform: rotate(-0.4deg);
+    padding: 26px 34px 30px;
+    max-width: 760px;
+    width: 100%;
+    animation: settle 0.45s ease;
+  }
+  @keyframes settle {
+    from { opacity: 0; transform: rotate(-2.5deg) translateY(22px); }
+    to   { opacity: 1; transform: rotate(-0.4deg) translateY(0); }
+  }
+
+  .setup-card h2 {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .players-row {
+    display: flex;
+    gap: 26px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .player-col {
+    flex: 1;
+    min-width: 260px;
+    padding: 14px 16px 16px;
+    border-radius: 14px;
+    border: 2px solid transparent;
+  }
+  .player-col[data-p="0"] { background: var(--p1-soft); border-color: var(--p1); transform: rotate(-0.5deg); }
+  .player-col[data-p="1"] { background: var(--p2-soft); border-color: var(--p2); transform: rotate(0.5deg); }
+
+  .player-col label {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 1.35rem;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .player-col[data-p="0"] label { color: var(--p1); }
+  .player-col[data-p="1"] label { color: var(--p2); }
+
+  .player-col input {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 1.15rem;
+    color: var(--pencil);
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--pencil);
+    padding: 3px 2px;
+    outline: none;
+  }
+  .player-col input:focus { border-bottom-style: dashed; }
+
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .emoji-grid button {
+    font-size: 1.45rem;
+    line-height: 1;
+    padding: 6px 0;
+    background: rgba(255, 255, 255, 0.65);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.12s, border-color 0.12s, background 0.12s;
+  }
+  .emoji-grid button:hover:not(:disabled) { transform: scale(1.25) rotate(-6deg); background: #fff; }
+  .emoji-grid button.selected { border-color: currentColor; background: #fff; transform: scale(1.12); }
+  .player-col[data-p="0"] .emoji-grid button.selected { border-color: var(--p1); }
+  .player-col[data-p="1"] .emoji-grid button.selected { border-color: var(--p2); }
+  .emoji-grid button:disabled { opacity: 0.22; cursor: not-allowed; filter: grayscale(0.8); }
+
+  .size-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+  }
+  .size-row .btn.size.selected {
+    border-style: solid;
+    background: var(--pencil);
+    color: var(--paper);
+    transform: rotate(-2deg);
+  }
+
+  .start-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+  }
+
+  /* ---------- winner banner ---------- */
+  #banner {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(247, 243, 232, 0.55);
+    backdrop-filter: blur(3px);
+    z-index: 6;
+  }
+  #banner.visible { display: flex; }
+
+  .banner-card {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid var(--pencil);
+    border-radius: 26px 16px 28px 14px / 14px 28px 16px 26px;
+    box-shadow: 8px 10px 0 rgba(58, 58, 58, 0.16);
+    padding: 34px 52px 30px;
+    transform: rotate(-1deg);
+    animation: settle 0.4s ease;
+  }
+  .banner-card .big-emoji { font-size: 4rem; display: block; animation: bounce 0.9s ease infinite alternate; }
+  @keyframes bounce {
+    from { transform: translateY(0) rotate(-4deg); }
+    to   { transform: translateY(-14px) rotate(4deg); }
+  }
+  .banner-card h2 {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: 2.6rem;
+    margin: 6px 0 2px;
+  }
+  .banner-card p { font-size: 1.25rem; opacity: 0.75; margin-bottom: 20px; }
+  .banner-card .btn { margin: 0 6px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1 class="logo">Dots <span class="amp">&amp;</span> Boxes
+    <svg class="scribble" viewBox="0 0 190 12" fill="none">
+      <path d="M3 8 C 30 3, 55 10, 85 6 S 140 9, 187 4" stroke="#d64541" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+  </h1>
+
+  <div id="hud">
+    <div class="scorecard" data-p="0">
+      <span class="pencil">✏️</span>
+      <span class="badge"></span>
+      <span class="who"><span class="name"></span><span class="score">0</span></span>
+    </div>
+    <span id="vs">vs</span>
+    <div class="scorecard" data-p="1">
+      <span class="pencil">✏️</span>
+      <span class="badge"></span>
+      <span class="who"><span class="name"></span><span class="score">0</span></span>
+    </div>
+  </div>
+
+  <div id="board"></div>
+  <button id="newGameBtn" class="btn">← New game</button>
+
+  <!-- setup -->
+  <div id="setup">
+    <div class="setup-card">
+      <h2>Grab a pencil — who's playing?</h2>
+      <div class="players-row">
+        <div class="player-col" data-p="0">
+          <label for="name0">Player 1</label>
+          <input type="text" maxlength="16" placeholder="Player 1" id="name0">
+          <div class="emoji-grid" id="emoji0"></div>
+        </div>
+        <div class="player-col" data-p="1">
+          <label for="name1">Player 2</label>
+          <input type="text" maxlength="16" placeholder="Player 2" id="name1">
+          <div class="emoji-grid" id="emoji1"></div>
+        </div>
+      </div>
+      <div class="size-row">
+        <h2 style="margin:0">Pen size:</h2>
+        <button class="btn size" data-size="3">3 × 3</button>
+        <button class="btn size selected" data-size="5">5 × 5</button>
+        <button class="btn size" data-size="7">7 × 7</button>
+        <button class="btn size" data-size="9">9 × 9</button>
+      </div>
+      <div class="start-row">
+        <button id="startBtn" class="btn primary">Start scribbling →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- winner banner -->
+  <div id="banner">
+    <div class="banner-card">
+      <span class="big-emoji" id="bannerEmoji">🏆</span>
+      <h2 id="bannerTitle"></h2>
+      <p id="bannerScore"></p>
+      <button id="againBtn" class="btn primary">Play again</button>
+      <button id="setupBtn" class="btn">Change setup</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8.19.0/dist/pixi.min.js"
+        integrity="sha384-brfu63ZHzOfumoqQXzA4Wo7k9kQOaJ68C/E7+Uc8lgQB42dOOjA+urOyy/sOnKPq"
+        crossorigin="anonymous"></script>
+<script>
+(() => {
+  const EMOJI = ['🐷','🐔','⭐','🔥','🐸','🦊','🌵','🍕','🚀','🐙',
+                 '🌈','⚡','🍩','👾','🦖','🐝','🍄','⚽','🎩','💎'];
+  const COLORS = [
+    { ink: 0x2b59c3, soft: 0x2b59c3, css: '#2b59c3' },
+    { ink: 0xd64541, soft: 0xd64541, css: '#d64541' },
+  ];
+  const PENCIL = 0x3a3a3a;
+
+  // ---------- setup screen state ----------
+  const picked = ['🐷', '🐔'];
+  let gridSize = 5;
+
+  const grids = [document.getElementById('emoji0'), document.getElementById('emoji1')];
+
+  function renderPalettes() {
+    grids.forEach((grid, p) => {
+      grid.innerHTML = '';
+      EMOJI.forEach(e => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = e;
+        if (picked[p] === e) b.classList.add('selected');
+        if (picked[1 - p] === e) b.disabled = true;
+        b.addEventListener('click', () => { picked[p] = e; renderPalettes(); });
+        grid.appendChild(b);
+      });
+    });
+  }
+  renderPalettes();
+
+  document.querySelectorAll('.btn.size').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.btn.size').forEach(x => x.classList.remove('selected'));
+      b.classList.add('selected');
+      gridSize = +b.dataset.size;
+    });
+  });
+
+  // ---------- game state ----------
+  const state = {
+    rows: 5, cols: 5,
+    players: [],       // {name, emoji, color, score}
+    current: 0,
+    hEdges: [],        // [rows+1][cols]  owner index or null
+    vEdges: [],        // [rows][cols+1]
+    boxes: [],         // [rows][cols]
+    remaining: 0,
+    over: false,
+  };
+
+  const el = {
+    setup: document.getElementById('setup'),
+    hud: document.getElementById('hud'),
+    board: document.getElementById('board'),
+    newGame: document.getElementById('newGameBtn'),
+    banner: document.getElementById('banner'),
+    bannerEmoji: document.getElementById('bannerEmoji'),
+    bannerTitle: document.getElementById('bannerTitle'),
+    bannerScore: document.getElementById('bannerScore'),
+    cards: [...document.querySelectorAll('.scorecard')],
+  };
+
+  function newGame() {
+    const { rows, cols } = state;
+    state.hEdges = Array.from({ length: rows + 1 }, () => Array(cols).fill(null));
+    state.vEdges = Array.from({ length: rows }, () => Array(cols + 1).fill(null));
+    state.boxes  = Array.from({ length: rows }, () => Array(cols).fill(null));
+    state.remaining = rows * cols;
+    state.current = 0;
+    state.over = false;
+    state.players.forEach(p => p.score = 0);
+    el.banner.classList.remove('visible');
+    updateHud();
+    buildBoard(false);
+  }
+
+  function updateHud(bumped = -1) {
+    el.cards.forEach((card, p) => {
+      const pl = state.players[p];
+      card.querySelector('.badge').textContent = pl.emoji;
+      card.querySelector('.name').textContent = pl.name;
+      const scoreEl = card.querySelector('.score');
+      scoreEl.textContent = pl.score;
+      card.classList.toggle('active', !state.over && p === state.current);
+      if (p === bumped) {
+        scoreEl.classList.remove('bump');
+        void scoreEl.offsetWidth; // restart animation
+        scoreEl.classList.add('bump');
+      }
+    });
+  }
+
+  // ---------- pixi ----------
+  let app = null;
+  let layers = null;   // {boxes, edges, dots, hits}
+  let geom = null;     // {cell, pad, dotAt(r,c)}
+
+  async function ensureApp() {
+    if (app) return app;
+    app = new PIXI.Application();
+    await app.init({
+      backgroundAlpha: 0,
+      antialias: true,
+      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      autoDensity: true,
+      width: 100, height: 100,
+    });
+    el.board.appendChild(app.canvas);
+    return app;
+  }
+
+  function computeGeometry() {
+    const { rows, cols } = state;
+    const availW = el.board.clientWidth - 24;
+    const availH = el.board.clientHeight - 24;
+    const cell = Math.max(36, Math.min(96, Math.floor(Math.min(availW / (cols + 1.2), availH / (rows + 1.2)))));
+    const pad = Math.round(cell * 0.6);
+    geom = {
+      cell, pad,
+      w: cols * cell + pad * 2,
+      h: rows * cell + pad * 2,
+      dotAt: (r, c) => ({ x: pad + c * cell, y: pad + r * cell }),
+    };
+  }
+
+  // a hand-drawn wobbly stroke between two points
+  function scribbleLine(g, x1, y1, x2, y2, color, width) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    const n = Math.max(4, Math.round(len / 13));
+    const nx = -dy / len, ny = dx / len;
+    g.moveTo(x1, y1);
+    for (let i = 1; i <= n; i++) {
+      const t = i / n;
+      const off = (i === n) ? 0 : (Math.random() - 0.5) * 2.6;
+      g.lineTo(x1 + dx * t + nx * off, y1 + dy * t + ny * off);
+    }
+    g.stroke({ width, color, cap: 'round', join: 'round' });
+  }
+
+  function dashedLine(g, x1, y1, x2, y2, color, width) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    const dash = 9, gap = 7;
+    let d = 0;
+    while (d < len) {
+      const t0 = d / len, t1 = Math.min(len, d + dash) / len;
+      g.moveTo(x1 + dx * t0, y1 + dy * t0);
+      g.lineTo(x1 + dx * t1, y1 + dy * t1);
+      d += dash + gap;
+    }
+    g.stroke({ width, color, alpha: 0.55, cap: 'round' });
+  }
+
+  function edgeEndpoints(kind, r, c) {
+    const a = geom.dotAt(r, c);
+    const b = kind === 'h' ? geom.dotAt(r, c + 1) : geom.dotAt(r + 1, c);
+    return [a.x, a.y, b.x, b.y];
+  }
+
+  function buildBoard(preserveAnimations = true) {
+    if (!app) return;
+    computeGeometry();
+    app.renderer.resize(geom.w, geom.h);
+    app.stage.removeChildren().forEach(ch => ch.destroy({ children: true }));
+
+    layers = {
+      boxes: new PIXI.Container(),
+      edges: new PIXI.Container(),
+      dots: new PIXI.Container(),
+      hits: new PIXI.Container(),
+    };
+    app.stage.addChild(layers.boxes, layers.edges, layers.dots, layers.hits);
+
+    const { rows, cols } = state;
+
+    // dots
+    const dots = new PIXI.Graphics();
+    for (let r = 0; r <= rows; r++) {
+      for (let c = 0; c <= cols; c++) {
+        const { x, y } = geom.dotAt(r, c);
+        dots.circle(x + (Math.random() - 0.5) * 1.4, y + (Math.random() - 0.5) * 1.4, Math.max(3.5, geom.cell * 0.055));
+      }
+    }
+    dots.fill(PENCIL);
+    layers.dots.addChild(dots);
+
+    // already-claimed state (redraw after resize)
+    for (let r = 0; r <= rows; r++)
+      for (let c = 0; c < cols; c++)
+        if (state.hEdges[r][c] !== null) drawClaimedEdge('h', r, c, state.hEdges[r][c]);
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c <= cols; c++)
+        if (state.vEdges[r][c] !== null) drawClaimedEdge('v', r, c, state.vEdges[r][c]);
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++)
+        if (state.boxes[r][c] !== null) drawBoxFill(r, c, state.boxes[r][c], false);
+
+    // hit areas
+    for (let r = 0; r <= rows; r++)
+      for (let c = 0; c < cols; c++)
+        if (state.hEdges[r][c] === null) makeHit('h', r, c);
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c <= cols; c++)
+        if (state.vEdges[r][c] === null) makeHit('v', r, c);
+  }
+
+  function makeHit(kind, r, c) {
+    const [x1, y1, x2, y2] = edgeEndpoints(kind, r, c);
+    const g = new PIXI.Graphics();
+    const thick = Math.max(14, geom.cell * 0.3);
+    const inset = geom.cell * 0.16;
+    g.hitArea = kind === 'h'
+      ? new PIXI.Rectangle(x1 + inset, y1 - thick / 2, (x2 - x1) - inset * 2, thick)
+      : new PIXI.Rectangle(x1 - thick / 2, y1 + inset, thick, (y2 - y1) - inset * 2);
+    g.eventMode = 'static';
+    g.cursor = 'pointer';
+    g.on('pointerover', () => {
+      if (state.over) return;
+      g.clear();
+      dashedLine(g, x1, y1, x2, y2, COLORS[state.current].ink, Math.max(3, geom.cell * 0.055));
+    });
+    g.on('pointerout', () => g.clear());
+    g.on('pointertap', () => {
+      if (state.over) return;
+      g.clear();
+      g.eventMode = 'none';
+      g.cursor = 'default';
+      claimEdge(kind, r, c);
+    });
+    layers.hits.addChild(g);
+  }
+
+  function drawClaimedEdge(kind, r, c, owner) {
+    const [x1, y1, x2, y2] = edgeEndpoints(kind, r, c);
+    const g = new PIXI.Graphics();
+    const w = Math.max(3.5, geom.cell * 0.065);
+    scribbleLine(g, x1, y1, x2, y2, COLORS[owner].ink, w);
+    scribbleLine(g, x1, y1, x2, y2, COLORS[owner].ink, w * 0.55); // second pen pass
+    layers.edges.addChild(g);
+  }
+
+  function drawBoxFill(r, c, owner, animate) {
+    const { cell } = geom;
+    const a = geom.dotAt(r, c);
+    const cx = a.x + cell / 2, cy = a.y + cell / 2;
+
+    const wrap = new PIXI.Container();
+    wrap.position.set(cx, cy);
+
+    const bg = new PIXI.Graphics();
+    const m = cell * 0.11;
+    bg.roundRect(-cell / 2 + m, -cell / 2 + m, cell - m * 2, cell - m * 2, cell * 0.14);
+    bg.fill({ color: COLORS[owner].soft, alpha: 0.16 });
+    wrap.addChild(bg);
+
+    const t = new PIXI.Text({
+      text: state.players[owner].emoji,
+      style: { fontSize: Math.round(cell * 0.5) },
+    });
+    t.anchor.set(0.5);
+    t.rotation = (Math.random() - 0.5) * 0.3;
+    wrap.addChild(t);
+    layers.boxes.addChild(wrap);
+
+    if (animate) {
+      wrap.scale.set(0);
+      let el = 0;
+      const tick = (ticker) => {
+        el += ticker.deltaMS / 320;
+        if (el >= 1) {
+          wrap.scale.set(1);
+          app.ticker.remove(tick);
+          return;
+        }
+        // ease-out-back overshoot
+        const s = 1 + 2.2 * Math.pow(el - 1, 3) + 1.2 * Math.pow(el - 1, 2);
+        wrap.scale.set(Math.max(0, s));
+      };
+      app.ticker.add(tick);
+    }
+  }
+
+  // ---------- rules ----------
+  function boxComplete(r, c) {
+    return state.hEdges[r][c] !== null && state.hEdges[r + 1][c] !== null &&
+           state.vEdges[r][c] !== null && state.vEdges[r][c + 1] !== null;
+  }
+
+  function claimEdge(kind, r, c) {
+    const me = state.current;
+    (kind === 'h' ? state.hEdges : state.vEdges)[r][c] = me;
+    drawClaimedEdge(kind, r, c, me);
+
+    // which boxes touch this edge?
+    const candidates = kind === 'h'
+      ? [[r - 1, c], [r, c]]
+      : [[r, c - 1], [r, c]];
+
+    let scored = 0;
+    for (const [br, bc] of candidates) {
+      if (br < 0 || bc < 0 || br >= state.rows || bc >= state.cols) continue;
+      if (state.boxes[br][bc] === null && boxComplete(br, bc)) {
+        state.boxes[br][bc] = me;
+        state.remaining--;
+        scored++;
+        drawBoxFill(br, bc, me, true);
+      }
+    }
+
+    if (scored) {
+      state.players[me].score += scored;
+      if (state.remaining === 0) return endGame();
+      updateHud(me); // completing a box = go again
+    } else {
+      state.current = 1 - me;
+      updateHud();
+    }
+  }
+
+  function endGame() {
+    state.over = true;
+    updateHud(state.current);
+    const [a, b] = state.players;
+    setTimeout(() => {
+      if (a.score !== b.score) {
+        const w = a.score > b.score ? a : b;
+        el.bannerEmoji.textContent = w.emoji;
+        el.bannerTitle.textContent = `${w.name} wins!`;
+      } else {
+        el.bannerEmoji.textContent = '🤝';
+        el.bannerTitle.textContent = "It's a tie!";
+      }
+      el.bannerScore.textContent = `${a.name} ${a.score} — ${b.score} ${b.name}`;
+      el.banner.classList.add('visible');
+    }, 650);
+  }
+
+  // ---------- flow ----------
+  async function startGame() {
+    state.rows = state.cols = gridSize;
+    state.players = [0, 1].map(p => ({
+      name: document.getElementById('name' + p).value.trim() || `Player ${p + 1}`,
+      emoji: picked[p],
+      score: 0,
+    }));
+    el.setup.classList.add('hidden');
+    el.hud.classList.add('visible');
+    el.board.classList.add('visible');
+    el.newGame.classList.add('visible');
+    await ensureApp();
+    newGame();
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('againBtn').addEventListener('click', () => newGame());
+  document.getElementById('setupBtn').addEventListener('click', backToSetup);
+  el.newGame.addEventListener('click', backToSetup);
+
+  function backToSetup() {
+    el.banner.classList.remove('visible');
+    el.setup.classList.remove('hidden');
+    el.hud.classList.remove('visible');
+    el.board.classList.remove('visible');
+    el.newGame.classList.remove('visible');
+  }
+
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (!app || el.setup.classList.contains('hidden') === false) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => buildBoard(), 140);
+  });
+})();
+</script>
+</body>
+</html>
